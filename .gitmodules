@@ -1,0 +1,6 @@
+[submodule "third_party/postcard-rpc"]
+	path = third_party/postcard-rpc
+	url = https://github.com/konkers/postcard-rpc.git
+[submodule "third_party/is31fl3731-async"]
+	path = third_party/is31fl3731-async
+	url = https://github.com/konkers/is31fl3731-async.git

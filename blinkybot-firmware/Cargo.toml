@@ -1,0 +1,56 @@
+[package]
+name = "blinkybot-firmware"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+blinkybot-rpc = { path = "../blinkybot-rpc" }
+cortex-m = "0.7.7"
+cortex-m-rt = "0.7.3"
+defmt = "0.3.8"
+defmt-rtt = "0.4.1"
+embassy-executor = { version = "0.6.0", features = [
+	"task-arena-size-98304",
+	"arch-cortex-m",
+	"executor-thread",
+	"executor-interrupt",
+	"defmt",
+	"integrated-timers",
+] }
+embassy-futures = { version = "0.1.0" }
+embassy-rp = { version = "0.2.0", features = [
+	"defmt",
+	"unstable-pac",
+	"time-driver",
+	"critical-section-impl",
+	"rp235xa",
+	"binary-info",
+] }
+embassy-time = { version = "0.3.2", features = [
+	"defmt",
+	"defmt-timestamp-uptime",
+] }
+embassy-usb = { version = "0.3.0", features = ["defmt"] }
+embedded-hal-async = "1.0.0"
+is31fl3731-async = { path = "../third_party/is31fl3731-async", features = ["charlie_wing"] }
+oorandom = "11.1.4"
+panic-probe = { version = "0.3.2", features = ["print-defmt"] }
+postcard-rpc = { version = "0.7", features = ["embassy-usb-0_3-server"] }
+postcard = { version = "1.0.8" }
+postcard-schema = { version = "0.1.0", features = ["derive"] }
+static_cell = "2.1.0"
+embassy-sync = "0.6.0"
+
+[profile.release]
+debug = 2
+
+[patch.crates-io]
+embassy-embedded-hal = { git = "https://github.com/embassy-rs/embassy" }
+embassy-executor = { git = "https://github.com/embassy-rs/embassy" }
+embassy-futures = { git = "https://github.com/embassy-rs/embassy" }
+embassy-rp = { git = "https://github.com/embassy-rs/embassy" }
+embassy-sync = { git = "https://github.com/embassy-rs/embassy" }
+embassy-time = { git = "https://github.com/embassy-rs/embassy" }
+embassy-usb = { git = "https://github.com/embassy-rs/embassy" }
+embassy-usb-driver = { git = "https://github.com/embassy-rs/embassy" }
+postcard-rpc = { path = "../third_party/postcard-rpc/source/postcard-rpc" }
