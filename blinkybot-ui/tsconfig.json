@@ -1,5 +1,7 @@
 {
-  "files": [],
+  "files": [
+    "node_modules/@types/w3c-web-usb/index.d.ts",
+  ],
   "references": [
     {
       "path": "./tsconfig.node.json"
