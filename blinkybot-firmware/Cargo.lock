@@ -123,12 +123,16 @@ dependencies = [
  "embassy-time",
  "embassy-usb",
  "embedded-hal-async",
+ "embedded-storage",
+ "embedded-storage-async",
  "is31fl3731-async",
  "oorandom",
  "panic-probe",
  "postcard",
  "postcard-rpc",
  "postcard-schema",
+ "sequential-storage",
+ "serde",
  "static_cell",
 ]
 
@@ -136,6 +140,7 @@ dependencies = [
 name = "blinkybot-rpc"
 version = "0.1.0"
 dependencies = [
+ "defmt",
  "postcard",
  "postcard-rpc",
  "serde",
@@ -1307,6 +1312,16 @@ name = "semver-parser"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
+
+[[package]]
+name = "sequential-storage"
+version = "3.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b80693b2169b3fe0f9c68d5fae804490cc437113c0526dbabb75c01e758db597"
+dependencies = [
+ "defmt",
+ "embedded-storage-async",
+]
 
 [[package]]
 name = "serde"

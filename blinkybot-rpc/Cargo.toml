@@ -4,9 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+defmt = { version = "0.3.8", optional = true }
 postcard = { version = "1.0.10", features = ["experimental-derive"] }
 postcard-rpc = "0.7"
 serde = { version = "1.0.210", default-features = false, features = ["derive"] }
 
 [patch.crates-io]
 postcard-rpc = { path = "../third_party/postcard-rpc/source/postcard-rpc" }
+
+[features]
+defmt = ["dep:defmt"]
