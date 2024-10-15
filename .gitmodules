@@ -4,3 +4,6 @@
 [submodule "third_party/is31fl3731-async"]
 	path = third_party/is31fl3731-async
 	url = https://github.com/konkers/is31fl3731-async.git
+[submodule "third_party/vite-plugin-wasm-pack"]
+	path = third_party/vite-plugin-wasm-pack
+	url = https://github.com/konkers/vite-plugin-wasm-pack.git

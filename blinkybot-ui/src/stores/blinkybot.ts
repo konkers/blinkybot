@@ -1,46 +1,52 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
+import init, { greet, BlinkyBotClient } from 'blinkybot-ui-wasm';
 
 export const useBlinkyBotStore = defineStore('blinkybot', {
 	state: (): BlinkyBot => {
-		return { device: null as USBDevice | null }
+		return { wasmInitialized: false, client: null }
 	},
 	getters: {
 		isConnected(): boolean {
-			return this.device != null;
+			return this.client != null;
 		}
 	},
 	actions: {
 		async connect() {
-			if (this.device !== null) {
+			if (!this.wasmInitialized) {
+				await init();
+				this.wasmInitialized = true;
+			}
+
+			if (this.client !== null) {
 				return;
 			}
 
-			const device = await navigator.usb.requestDevice({ filters: [{ vendorId: 0xf569 }] })
-			await device.open()
-			await device.claimInterface(1)
-			this.device = device;
+			const client = await new BlinkyBotClient();
+			this.client = client;
 		},
 
 		async disconnect() {
-			if (this.device === null) {
+			if (this.client === null) {
 				return;
 			}
 
-			await this.device.close()
-			this.device = null;
+			this.client.close();
+			await this.client.wait_closed();
+			this.client = null;
 		},
 
-		async testTransaction() {
-			if (this.device === null) {
-				return;
+		async ping(id: number): Promise<number> {
+			console.log(this.client);
+			if (this.client === null) {
+				return 0;
 			}
-			this.device.transferIn(1, 64).then((data) => console.log(data))
-			await this.device.transferOut(1, new Uint8Array([1, 2, 3]))
+			return await this.client.ping(1);
 		}
 	},
 })
 
 interface BlinkyBot {
-	device: USBDevice | null;
+	client: BlinkyBotClient | null;
+	wasmInitialized: boolean;
 }

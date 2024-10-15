@@ -5,7 +5,8 @@ import Expression from '@/components/Expression.vue';
 const blinkyBot = useBlinkyBotStore();
 
 const handler = async () => {
-  await blinkyBot.testTransaction();
+  const response = await blinkyBot.ping(1);
+  console.log(response);
 };
 </script>
 
