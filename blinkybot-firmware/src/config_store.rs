@@ -1,10 +1,10 @@
 use core::ops::Range;
 
-use defmt::{debug, error};
+use defmt::error;
 use embedded_storage_async::nor_flash::NorFlash;
 use sequential_storage::{
     cache::NoCache,
-    map::{fetch_item, store_item, Key, SerializationError, Value},
+    map::{fetch_item, Key, SerializationError, Value},
 };
 use serde::{Deserialize, Serialize};
 

@@ -1,20 +1,16 @@
 use defmt::info;
 use embassy_executor::Spawner;
-use embassy_futures::join::join;
 use embassy_rp::peripherals::USB;
 use embassy_rp::usb::{Driver as UsbDriver, Endpoint, Out};
-use embassy_sync::{blocking_mutex::raw::ThreadModeRawMutex, mutex::Mutex};
+use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_usb::class::web_usb::{Config as WebUsbConfig, State, Url, WebUsb};
-use embassy_usb::driver::{Driver, EndpointIn, EndpointOut};
+use embassy_usb::driver::Driver;
 use embassy_usb::msos::{self, windows_version};
 use embassy_usb::{Builder, Config, UsbDevice};
 
 use postcard_rpc::{
     define_dispatch,
-    target_server::{
-        buffers::AllBuffers, configure_usb, example_config, rpc_dispatch, sender::Sender,
-        SpawnContext,
-    },
+    target_server::{buffers::AllBuffers, rpc_dispatch, SpawnContext},
     WireHeader,
 };
 
@@ -118,23 +114,6 @@ pub fn setup(spawner: Spawner, driver: UsbDriver<'static, USB>) {
         &mut buffers.rx_buf,
     ));
     spawner.must_spawn(usb_task(usb));
-    //   let rpc_fut = dispatch_task(endpoints.read_ep, dispatch, &mut buffers.rx_buf);
-
-    // // Run the USB device.
-    //    let usb_fut = usb.run();
-
-    // // Do some WebUSB transfers.
-    // let webusb_fut = async {
-    //     loop {
-    //         endpoints.wait_connected().await;
-    //         info!("Connected");
-    //         endpoints.echo().await;
-    //     }
-    // };
-
-    // // Run everything concurrently.
-    // // If we had made everything `'static` above instead, we could do this using separate tasks instead.
-    // join(usb_fut, webusb_fut).await;
 }
 
 struct WebEndpoints<'d, D: Driver<'d>> {
@@ -153,22 +132,6 @@ impl<'d, D: Driver<'d>> WebEndpoints<'d, D> {
 
         WebEndpoints { write_ep, read_ep }
     }
-
-    // // Wait until the device's endpoints are enabled.
-    // async fn wait_connected(&mut self) {
-    //     // self.read_ep.wait_enabled().await
-    // }
-
-    // // Echo data back to the host.
-    // async fn echo(&mut self) {
-    //     let mut buf = [0; 64];
-    //     loop {
-    //         let n = self.read_ep.read(&mut buf).await.unwrap();
-    //         let data = &buf[..n];
-    //         info!("Data read: {:x}", data);
-    //         self.write_ep.write(data).await.unwrap();
-    //     }
-    // }
 }
 
 /// This actually runs the dispatcher

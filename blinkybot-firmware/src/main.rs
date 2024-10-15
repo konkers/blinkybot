@@ -9,19 +9,17 @@
 use blinkybot_rpc::ExpressionIndex;
 use defmt::*;
 use embassy_executor::Spawner;
+use embassy_rp::bind_interrupts;
 use embassy_rp::block::ImageDef;
 use embassy_rp::flash::{Async, Flash};
 use embassy_rp::i2c::{self, Config};
-use embassy_rp::pac::pwm::regs::ChCc;
 use embassy_rp::peripherals::{I2C1, USB};
 use embassy_rp::usb;
-use embassy_rp::{bind_interrupts, flash};
 use embassy_time::{Delay, Timer};
 use embedded_hal_async::i2c::I2c;
 use is31fl3731_async::devices::CharlieWing;
 use is31fl3731_async::IS31FL3731;
 use oorandom::Rand32;
-use postcard_rpc::target_server::configure_usb;
 use {defmt_rtt as _, panic_probe as _};
 
 mod config_store;
@@ -90,14 +88,6 @@ async fn main_(spawner: Spawner) {
     let mut rng = Rand32::new(0);
 
     set_face(&mut matrix, default_expression.pixels).await;
-    // for y in 0..7 {
-    //     for x in 0..15 {
-    //         unwrap!(
-    //             matrix.pixel(x, y, FACE[y as usize][x as usize]).await,
-    //             "Failed to set pixel light on"
-    //         );
-    //     }
-    // }
 
     loop {
         let blink_wait = rng.rand_range(2000..10000);
@@ -117,20 +107,6 @@ where
             let value = if (row & (1 << x)) != 0 { 0x2f } else { 0x00 };
             unwrap!(
                 matrix.pixel(x, y as u8, value).await,
-                "Failed to set pixel light on"
-            );
-        }
-    }
-}
-
-async fn set_face_old<I2C, I2cError>(matrix: &mut IS31FL3731<I2C>, face: [[u8; 15]; 7])
-where
-    I2C: I2c<Error = I2cError>,
-{
-    for y in 0..7 {
-        for x in 0..15 {
-            unwrap!(
-                matrix.pixel(x, y, face[y as usize][x as usize]).await,
                 "Failed to set pixel light on"
             );
         }
