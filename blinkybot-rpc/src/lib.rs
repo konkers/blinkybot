@@ -9,7 +9,12 @@ use wasm_bindgen::prelude::*;
 
 endpoint!(PingEndpoint, u32, u32, "ping");
 endpoint!(SetExpressionEndpoint, SetExpression, (), "expression/set");
-endpoint!(GetExpressionEndpoint, u16, Expression, "expression/get");
+endpoint!(
+    GetExpressionEndpoint,
+    ExpressionIndex,
+    Expression,
+    "expression/get"
+);
 
 #[derive(Serialize, Deserialize, Schema, Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]

@@ -13,7 +13,9 @@ const blinkyBot = useBlinkyBotStore();
   <v-app id="inspire">
     <v-app-bar flat>
       <v-container class="mx-auto d-flex align-center justify-center">
-        <v-avatar class="me-4" color="grey-darken-1" size="32"></v-avatar>
+        <RouterLink to="/">
+          <v-avatar class="me-4" color="grey-darken-1" size="32" link to="/"></v-avatar>
+        </RouterLink>
 
         <v-btn v-if="blinkyBot.isConnected" @click="blinkyBot.disconnect()">Disconnect</v-btn>
         <v-btn v-else @click="blinkyBot.connect()">Connect</v-btn>
@@ -30,11 +32,8 @@ const blinkyBot = useBlinkyBotStore();
           <v-col cols="2">
             <v-sheet rounded="lg">
               <v-list rounded="lg">
-                <v-list-item v-for="n in 5" :key="n" :title="`List Item ${n}`" link></v-list-item>
-
-                <v-divider class="my-2"></v-divider>
-
-                <v-list-item color="grey-lighten-4" title="Refresh" link></v-list-item>
+                <v-list-item title="Default" link to="/expression/default"></v-list-item>
+                <v-list-item title="Blink" link to="/expression/blink"></v-list-item>
               </v-list>
             </v-sheet>
           </v-col>

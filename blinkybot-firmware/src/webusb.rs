@@ -17,7 +17,8 @@ use postcard_rpc::{
 };
 
 use blinkybot_rpc::{
-    Expression, ExpressionIndex, PingEndpoint, SetExpression, SetExpressionEndpoint,
+    Expression, ExpressionIndex, GetExpressionEndpoint, PingEndpoint, SetExpression,
+    SetExpressionEndpoint,
 };
 use static_cell::{ConstStaticCell, StaticCell};
 
@@ -59,6 +60,7 @@ define_dispatch! {
     >;
     PingEndpoint => blocking ping_handler,
     SetExpressionEndpoint => async set_expression_handler,
+    GetExpressionEndpoint => async get_expression_handler,
 }
 
 static ALL_BUFFERS: ConstStaticCell<AllBuffers<256, 256, 256>> =
@@ -219,4 +221,13 @@ async fn set_expression_handler(context: &mut Context, header: WireHeader, reque
             context.blink_expression_sender.send(request.expression)
         }
     }
+}
+
+async fn get_expression_handler(
+    context: &mut Context,
+    header: WireHeader,
+    request: ExpressionIndex,
+) -> Expression {
+    info!("get expression: seq - {=u32} {}", header.seq_no, request);
+    context.config_store.get_expression(request).await
 }

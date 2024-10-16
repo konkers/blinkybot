@@ -1,6 +1,9 @@
 use std::convert::Infallible;
 
-use blinkybot_rpc::{self, ExpressionIndex, PingEndpoint, SetExpression, SetExpressionEndpoint};
+use blinkybot_rpc::{
+    self, ExpressionIndex, GetExpressionEndpoint, PingEndpoint, SetExpression,
+    SetExpressionEndpoint,
+};
 use postcard_rpc::{
     host_client::{HostClient, HostErr},
     standard_icd::{WireError, ERROR_PATH},
@@ -98,6 +101,17 @@ impl BlinkyBotClient {
             })
             .await?;
         Ok(())
+    }
+
+    pub async fn get_expression(
+        &self,
+        index: ExpressionIndex,
+    ) -> Result<Expression, Error<Infallible>> {
+        let expression = self
+            .client
+            .send_resp::<GetExpressionEndpoint>(&index)
+            .await?;
+        Ok(Expression { inner: expression })
     }
 }
 #[wasm_bindgen]

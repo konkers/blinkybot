@@ -51,6 +51,13 @@ export const useBlinkyBotStore = defineStore('blinkybot', {
 				return;
 			}
 			await this.client.set_expression(index, expression);
+		},
+
+		async get_expression(index: ExpressionIndex): Expression {
+			if (this.client === null) {
+				return new Expression();
+			}
+			return await this.client.get_expression(index);
 		}
 	},
 })
