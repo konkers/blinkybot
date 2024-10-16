@@ -11,7 +11,7 @@ crate-type = ["cdylib", "rlib"]
 default = ["console_error_panic_hook"]
 
 [dependencies]
-blinkybot-rpc = { path = "../../blinkybot-rpc" }
+blinkybot-rpc = { path = "../../blinkybot-rpc", features = ["wasm-bindgen"] }
 postcard-rpc = { version = "0.7.0", features = ["webusb"] }
 wasm-bindgen = "0.2.84"
 wasm-bindgen-futures = "0.4.45"

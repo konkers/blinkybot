@@ -8,9 +8,11 @@ defmt = { version = "0.3.8", optional = true }
 postcard = { version = "1.0.10", features = ["experimental-derive"] }
 postcard-rpc = "0.7"
 serde = { version = "1.0.210", default-features = false, features = ["derive"] }
+wasm-bindgen = { version = "0.2.95", optional = true }
 
 [patch.crates-io]
 postcard-rpc = { path = "../third_party/postcard-rpc/source/postcard-rpc" }
 
 [features]
 defmt = ["dep:defmt"]
+wasm-bindgen = ["dep:wasm-bindgen"]

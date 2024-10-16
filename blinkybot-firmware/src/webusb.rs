@@ -1,8 +1,10 @@
-use defmt::info;
+use defmt::{error, info};
 use embassy_executor::Spawner;
-use embassy_rp::peripherals::USB;
+use embassy_rp::flash::{Async, Flash};
+use embassy_rp::peripherals::{FLASH, USB};
 use embassy_rp::usb::{Driver as UsbDriver, Endpoint, Out};
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
+use embassy_sync::watch::{DynSender, Watch};
 use embassy_usb::class::web_usb::{Config as WebUsbConfig, State, Url, WebUsb};
 use embassy_usb::driver::Driver;
 use embassy_usb::msos::{self, windows_version};
@@ -14,10 +16,32 @@ use postcard_rpc::{
     WireHeader,
 };
 
-use blinkybot_rpc::PingEndpoint;
+use blinkybot_rpc::{
+    Expression, ExpressionIndex, PingEndpoint, SetExpression, SetExpressionEndpoint,
+};
 use static_cell::{ConstStaticCell, StaticCell};
 
-pub struct Context {}
+use crate::config_store::FlashConfigStore;
+
+pub struct Comms {
+    pub default_expression: Watch<ThreadModeRawMutex, Expression, 1>,
+    pub blink_expression: Watch<ThreadModeRawMutex, Expression, 1>,
+}
+
+impl Comms {
+    pub fn new() -> Self {
+        Self {
+            default_expression: Watch::new(),
+            blink_expression: Watch::new(),
+        }
+    }
+}
+
+pub struct Context {
+    default_expression_sender: DynSender<'static, Expression>,
+    blink_expression_sender: DynSender<'static, Expression>,
+    config_store: FlashConfigStore<Flash<'static, FLASH, Async, { crate::FLASH_SIZE }>>,
+}
 
 pub struct SpawnCtx {}
 
@@ -34,6 +58,7 @@ define_dispatch! {
         Context = Context,
     >;
     PingEndpoint => blocking ping_handler,
+    SetExpressionEndpoint => async set_expression_handler,
 }
 
 static ALL_BUFFERS: ConstStaticCell<AllBuffers<256, 256, 256>> =
@@ -42,7 +67,11 @@ static ALL_BUFFERS: ConstStaticCell<AllBuffers<256, 256, 256>> =
 // This is a randomly generated GUID to allow clients on Windows to find our device
 const DEVICE_INTERFACE_GUIDS: &[&str] = &["{753ff41c-07a6-48f2-8655-abcdbe4a4cab}"];
 
-pub fn setup(spawner: Spawner, driver: UsbDriver<'static, USB>) {
+pub async fn setup(
+    spawner: Spawner,
+    driver: UsbDriver<'static, USB>,
+    config_store: FlashConfigStore<Flash<'static, FLASH, Async, { crate::FLASH_SIZE }>>,
+) -> &'static Comms {
     // Create embassy-usb Config
     let mut config = Config::new(0xf569, 0x0001);
     config.manufacturer = Some("Konkers");
@@ -57,13 +86,6 @@ pub fn setup(spawner: Spawner, driver: UsbDriver<'static, USB>) {
     config.device_sub_class = 0x00;
     config.device_protocol = 0x00;
 
-    // Create embassy-usb DeviceBuilder using the driver and config.
-    // It needs some buffers for building the descriptors.
-    // let mut config_descriptor = [0; 256];
-    // let mut bos_descriptor = [0; 256];
-    // let mut control_buf = [0; 64];
-    // let mut msos_descriptor = [0; 256];
-
     static WEB_USB_CONFIG: StaticCell<WebUsbConfig> = StaticCell::new();
     let webusb_config: &mut WebUsbConfig = WEB_USB_CONFIG.init(WebUsbConfig {
         max_packet_size: 64,
@@ -71,6 +93,9 @@ pub fn setup(spawner: Spawner, driver: UsbDriver<'static, USB>) {
         // If defined, shows a landing page which the device manufacturer would like the user to visit in order to control their device. Suggest the user to navigate to this URL when the device is connected.
         landing_url: Some(Url::new("http://localhost:8080")),
     });
+
+    static COMMS: StaticCell<Comms> = StaticCell::new();
+    let comms: &Comms = COMMS.init(Comms::new());
 
     static STATE: StaticCell<State> = StaticCell::new();
     let state: &mut State = STATE.init(State::new());
@@ -106,7 +131,24 @@ pub fn setup(spawner: Spawner, driver: UsbDriver<'static, USB>) {
     // Build the builder.
     let usb = builder.build();
 
-    let dispatch = Dispatcher::new(&mut buffers.tx_buf, endpoints.write_ep, Context {});
+    let mut context = Context {
+        default_expression_sender: comms.default_expression.dyn_sender(),
+        blink_expression_sender: comms.blink_expression.dyn_sender(),
+        config_store,
+    };
+    context.default_expression_sender.send(
+        context
+            .config_store
+            .get_expression(ExpressionIndex::Default)
+            .await,
+    );
+    context.blink_expression_sender.send(
+        context
+            .config_store
+            .get_expression(ExpressionIndex::Blink)
+            .await,
+    );
+    let dispatch = Dispatcher::new(&mut buffers.tx_buf, endpoints.write_ep, context);
 
     spawner.must_spawn(dispatch_task(
         endpoints.read_ep,
@@ -114,6 +156,8 @@ pub fn setup(spawner: Spawner, driver: UsbDriver<'static, USB>) {
         &mut buffers.rx_buf,
     ));
     spawner.must_spawn(usb_task(usb));
+
+    comms
 }
 
 struct WebEndpoints<'d, D: Driver<'d>> {
@@ -153,4 +197,26 @@ pub async fn usb_task(mut usb: UsbDevice<'static, UsbDriver<'static, USB>>) {
 fn ping_handler(_context: &mut Context, header: WireHeader, rqst: u32) -> u32 {
     info!("ping: seq - {=u32}", header.seq_no);
     rqst
+}
+
+async fn set_expression_handler(context: &mut Context, header: WireHeader, request: SetExpression) {
+    info!("set expression: seq - {=u32} {}", header.seq_no, request);
+    if let Err(e) = context
+        .config_store
+        .set_expression(request.index.clone(), request.expression.clone())
+        .await
+    {
+        error!(
+            "Failed to save espression {} to flash: {}",
+            request.index, e
+        );
+    }
+    match &request.index {
+        blinkybot_rpc::ExpressionIndex::Default => {
+            context.default_expression_sender.send(request.expression)
+        }
+        blinkybot_rpc::ExpressionIndex::Blink => {
+            context.blink_expression_sender.send(request.expression)
+        }
+    }
 }

@@ -4,10 +4,11 @@ use defmt::error;
 use embedded_storage_async::nor_flash::NorFlash;
 use sequential_storage::{
     cache::NoCache,
-    map::{fetch_item, Key, SerializationError, Value},
+    map::{fetch_item, store_item, Key, SerializationError, Value},
 };
 use serde::{Deserialize, Serialize};
 
+use crate::{Error, Result};
 use blinkybot_rpc::{Expression, ExpressionIndex};
 
 const POSTCARD_BYTES_PER_WORD: usize = 5;
@@ -30,12 +31,12 @@ fn postcard_to_storage_err(e: postcard::Error) -> SerializationError {
 }
 
 impl Key for ConfigKey {
-    fn serialize_into(&self, buffer: &mut [u8]) -> Result<usize, SerializationError> {
+    fn serialize_into(&self, buffer: &mut [u8]) -> core::result::Result<usize, SerializationError> {
         let key_buf = postcard::to_slice(&self, buffer).map_err(postcard_to_storage_err)?;
         Ok(key_buf.len())
     }
 
-    fn deserialize_from(buffer: &[u8]) -> Result<(Self, usize), SerializationError> {
+    fn deserialize_from(buffer: &[u8]) -> core::result::Result<(Self, usize), SerializationError> {
         let (key, value_buf) =
             postcard::take_from_bytes(buffer).map_err(postcard_to_storage_err)?;
         Ok((key, buffer.len() - value_buf.len()))
@@ -55,12 +56,12 @@ impl ConfigValue {
 }
 
 impl<'a> Value<'a> for ConfigValue {
-    fn serialize_into(&self, buffer: &mut [u8]) -> Result<usize, SerializationError> {
+    fn serialize_into(&self, buffer: &mut [u8]) -> core::result::Result<usize, SerializationError> {
         let key_buf = postcard::to_slice(&self, buffer).map_err(postcard_to_storage_err)?;
         Ok(key_buf.len())
     }
 
-    fn deserialize_from(buffer: &'a [u8]) -> Result<Self, SerializationError> {
+    fn deserialize_from(buffer: &'a [u8]) -> core::result::Result<Self, SerializationError> {
         let (value, _) = postcard::take_from_bytes(buffer).map_err(postcard_to_storage_err)?;
         Ok(value)
     }
@@ -140,5 +141,25 @@ where
                 Self::default_expression(index)
             }
         }
+    }
+
+    pub async fn set_expression(
+        &mut self,
+        index: ExpressionIndex,
+        expression: Expression,
+    ) -> Result<()> {
+        let mut buffer = [0u8; ConfigKey::BUFFER_SIZE + ConfigValue::BUFFER_SIZE];
+        let key = ConfigKey::ExpressionV0(index);
+        let value = ConfigValue::ExpressionV0(expression);
+        store_item(
+            &mut self.flash,
+            self.range.clone(),
+            &mut NoCache::new(),
+            &mut buffer,
+            &key,
+            &value,
+        )
+        .await
+        .map_err(|_| Error::Storage)
     }
 }

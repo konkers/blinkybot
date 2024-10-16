@@ -4,20 +4,29 @@ import type { Ref } from 'vue';
 
 import Pixel from './Pixel.vue';
 
-const pixelWidth = 15;
-const pixelHeight = 7;
-const pixels: Ref<boolean[][]> = ref(
-  new Array(pixelHeight).fill(false).map(() => new Array(pixelWidth).fill(false))
-);
+const props = defineProps<{
+  pixels: boolean[][];
+}>();
+const emit = defineEmits<{
+  (event: 'update:pixels', payload: boolean[][]): void;
+}>();
+
+const updatePixel = (row: number, col: number, value: boolean) => {
+  let pixels = props.pixels;
+
+  pixels[row][col] = value;
+  emit('update:pixels', pixels);
+};
 </script>
 
 <template>
   <div class="pixels" v-if="pixels">
-    <div class="pixel_row" v-for="(row, row_index) in pixels">
+    <div class="pixel_row" v-for="(row, row_index) in pixels" :key="row_index">
       <Pixel
         v-for="(pixel, col_index) in row"
+        :key="col_index"
         :state="pixel"
-        @update:state="($event) => (pixels[row_index][col_index] = $event)"
+        @update:state="($event) => updatePixel(row_index, col_index, $event)"
       ></Pixel>
     </div>
   </div>

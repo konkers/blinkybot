@@ -1,6 +1,8 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import init, { greet, BlinkyBotClient } from 'blinkybot-ui-wasm';
+import init, { greet, BlinkyBotClient, ExpressionIndex, Expression } from 'blinkybot-ui-wasm';
+
+export { Expression, ExpressionIndex } from 'blinkybot-ui-wasm';
 
 export const useBlinkyBotStore = defineStore('blinkybot', {
 	state: (): BlinkyBot => {
@@ -42,6 +44,13 @@ export const useBlinkyBotStore = defineStore('blinkybot', {
 				return 0;
 			}
 			return await this.client.ping(1);
+		},
+
+		async set_expression(index: ExpressionIndex, expression: Expression) {
+			if (this.client === null) {
+				return;
+			}
+			await this.client.set_expression(index, expression);
 		}
 	},
 })

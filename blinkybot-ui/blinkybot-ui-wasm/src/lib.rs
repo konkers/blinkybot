@@ -1,6 +1,6 @@
 use std::convert::Infallible;
 
-use blinkybot_rpc::PingEndpoint;
+use blinkybot_rpc::{self, ExpressionIndex, PingEndpoint, SetExpression, SetExpressionEndpoint};
 use postcard_rpc::{
     host_client::{HostClient, HostErr},
     standard_icd::{WireError, ERROR_PATH},
@@ -36,6 +36,29 @@ pub struct BlinkyBotClient {
 }
 
 #[wasm_bindgen]
+pub struct Expression {
+    inner: blinkybot_rpc::Expression,
+}
+
+#[wasm_bindgen]
+impl Expression {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self {
+            inner: blinkybot_rpc::Expression { pixels: [0u16; 7] },
+        }
+    }
+
+    pub fn set_pixel(&mut self, x: u32, y: u32, state: bool) {
+        self.inner.set_pixel(x, y, state)
+    }
+
+    pub fn get_pixel(&self, x: u32, y: u32) -> bool {
+        self.inner.get_pixel(x, y)
+    }
+}
+
+#[wasm_bindgen]
 impl BlinkyBotClient {
     #[wasm_bindgen(constructor)]
     pub async fn new() -> Result<Self, String> {
@@ -61,6 +84,20 @@ impl BlinkyBotClient {
     pub async fn ping(&self, id: u32) -> Result<u32, Error<Infallible>> {
         let val = self.client.send_resp::<PingEndpoint>(&id).await?;
         Ok(val)
+    }
+
+    pub async fn set_expression(
+        &self,
+        index: ExpressionIndex,
+        expression: Expression,
+    ) -> Result<(), Error<Infallible>> {
+        self.client
+            .send_resp::<SetExpressionEndpoint>(&SetExpression {
+                index,
+                expression: expression.inner,
+            })
+            .await?;
+        Ok(())
     }
 }
 #[wasm_bindgen]

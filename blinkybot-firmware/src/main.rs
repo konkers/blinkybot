@@ -23,7 +23,11 @@ use oorandom::Rand32;
 use {defmt_rtt as _, panic_probe as _};
 
 mod config_store;
+mod error;
 mod webusb;
+
+pub use error::Error;
+pub use error::Result;
 
 #[link_section = ".start_block"]
 #[used]
@@ -52,14 +56,11 @@ macro_rules! symbol_address {
         unsafe { (&$symbol) as *const u32 as u32 }
     }};
 }
+const FLASH_SIZE: usize = 8 * 1024 * 1024;
 
 #[embassy_executor::main]
 async fn main_(spawner: Spawner) {
     let p = embassy_rp::init(Default::default());
-
-    // Create the driver, from the HAL.
-    let driver = usb::Driver::new(p.USB, Irqs);
-    webusb::setup(spawner, driver);
 
     let sda = p.PIN_2;
     let scl = p.PIN_3;
@@ -70,14 +71,18 @@ async fn main_(spawner: Spawner) {
     let user_flash_end = symbol_address!(_user_flash_end);
     let flash_range = (user_flash_start - flash_start)..(user_flash_end - flash_start);
 
-    const FLASH_SIZE: usize = 8 * 1024 * 1024;
     defmt::assert_eq!((user_flash_end - flash_start) as usize, FLASH_SIZE);
 
     let flash = Flash::<_, Async, FLASH_SIZE>::new(p.FLASH, p.DMA_CH0);
-    let mut config_store = config_store::FlashConfigStore::new(flash, flash_range);
+    let config_store = config_store::FlashConfigStore::new(flash, flash_range);
 
-    let default_expression = config_store.get_expression(ExpressionIndex::Default).await;
-    let blink_expression = config_store.get_expression(ExpressionIndex::Blink).await;
+    // let default_expression = config_store.get_expression(ExpressionIndex::Default).await;
+    // let blink_expression = config_store.get_expression(ExpressionIndex::Blink).await;
+
+    info!("set up comms");
+    // Create the driver, from the HAL.
+    let driver = usb::Driver::new(p.USB, Irqs);
+    let comms = webusb::setup(spawner, driver, config_store).await;
 
     info!("set up i2c ");
     let i2c = i2c::I2c::new_async(p.I2C1, scl, sda, Irqs, Config::default());
@@ -87,14 +92,17 @@ async fn main_(spawner: Spawner) {
     unwrap!(matrix.setup(&mut Delay {}).await, "Failed to setup display");
     let mut rng = Rand32::new(0);
 
-    set_face(&mut matrix, default_expression.pixels).await;
+    let mut default_expression = comms.default_expression.dyn_receiver().unwrap();
+    let mut blink_expression = comms.blink_expression.dyn_receiver().unwrap();
+
+    set_face(&mut matrix, default_expression.get().await.pixels).await;
 
     loop {
         let blink_wait = rng.rand_range(2000..10000);
         Timer::after_millis(blink_wait.into()).await;
-        set_face(&mut matrix, blink_expression.pixels).await;
+        set_face(&mut matrix, blink_expression.get().await.pixels).await;
         Timer::after_millis(25).await;
-        set_face(&mut matrix, default_expression.pixels).await;
+        set_face(&mut matrix, default_expression.get().await.pixels).await;
     }
 }
 

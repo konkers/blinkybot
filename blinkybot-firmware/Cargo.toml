@@ -51,12 +51,12 @@ embedded-storage-async = "0.4.1"
 debug = 2
 
 [patch.crates-io]
-embassy-embedded-hal = { git = "https://github.com/embassy-rs/embassy" }
-embassy-executor = { git = "https://github.com/embassy-rs/embassy" }
-embassy-futures = { git = "https://github.com/embassy-rs/embassy" }
-embassy-rp = { git = "https://github.com/embassy-rs/embassy" }
-embassy-sync = { git = "https://github.com/embassy-rs/embassy" }
-embassy-time = { git = "https://github.com/embassy-rs/embassy" }
-embassy-usb = { git = "https://github.com/embassy-rs/embassy" }
-embassy-usb-driver = { git = "https://github.com/embassy-rs/embassy" }
+embassy-embedded-hal = { git = "https://github.com/embassy-rs/embassy", rev = "e350ca836a985829b7548b8ac3009f38573b4215" }
+embassy-executor = { git = "https://github.com/embassy-rs/embassy", rev = "e350ca836a985829b7548b8ac3009f38573b4215" }
+embassy-futures = { git = "https://github.com/embassy-rs/embassy", rev = "e350ca836a985829b7548b8ac3009f38573b4215" }
+embassy-rp = { git = "https://github.com/embassy-rs/embassy", rev = "e350ca836a985829b7548b8ac3009f38573b4215" }
+embassy-sync = { git = "https://github.com/embassy-rs/embassy", rev = "e350ca836a985829b7548b8ac3009f38573b4215" }
+embassy-time = { git = "https://github.com/embassy-rs/embassy", rev = "e350ca836a985829b7548b8ac3009f38573b4215" }
+embassy-usb = { git = "https://github.com/embassy-rs/embassy", rev = "e350ca836a985829b7548b8ac3009f38573b4215" }
+embassy-usb-driver = { git = "https://github.com/embassy-rs/embassy", rev = "e350ca836a985829b7548b8ac3009f38573b4215" }
 postcard-rpc = { path = "../third_party/postcard-rpc/source/postcard-rpc" }
