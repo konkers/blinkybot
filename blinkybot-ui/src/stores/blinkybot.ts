@@ -65,6 +65,20 @@ export const useBlinkyBotStore = defineStore('blinkybot', {
 				return 0x0;
 			}
 			return await this.client.get_adc();
+		},
+
+		async get_brightness(): Promise<number> {
+			if (this.client === null) {
+				return 0x0;
+			}
+			return await this.client.get_brightness();
+		},
+
+		async set_brightness(value: number) {
+			if (this.client === null) {
+				return;
+			}
+			return await this.client.set_brightness(value);
 		}
 	},
 })

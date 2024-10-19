@@ -16,6 +16,7 @@ const POSTCARD_BYTES_PER_WORD: usize = 5;
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 enum ConfigKey {
     ExpressionV0(ExpressionIndex),
+    BrightnessV0,
 }
 
 impl ConfigKey {
@@ -46,6 +47,7 @@ impl Key for ConfigKey {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 enum ConfigValue {
     ExpressionV0(Expression),
+    BrightnessV0(u8),
 }
 
 impl ConfigValue {
@@ -79,6 +81,7 @@ impl<Flash: NorFlash> FlashConfigStore<Flash>
 where
     Flash::Error: defmt::Format,
 {
+    const DEFAULT_BRIGHTNESS: u8 = 0x2f;
     pub fn new(flash: Flash, range: Range<u32>) -> Self {
         Self { flash, range }
     }
@@ -173,6 +176,54 @@ where
         let mut buffer = [0u8; ConfigKey::BUFFER_SIZE + ConfigValue::BUFFER_SIZE];
         let key = ConfigKey::ExpressionV0(index);
         let value = ConfigValue::ExpressionV0(expression);
+        store_item(
+            &mut self.flash,
+            self.range.clone(),
+            &mut NoCache::new(),
+            &mut buffer,
+            &key,
+            &value,
+        )
+        .await
+        .map_err(|_| Error::Storage)
+    }
+
+    pub async fn get_brightness(&mut self) -> u8 {
+        let mut buffer = [0u8; ConfigKey::BUFFER_SIZE + ConfigValue::BUFFER_SIZE];
+        let key = ConfigKey::BrightnessV0;
+        match fetch_item(
+            &mut self.flash,
+            self.range.clone(),
+            &mut NoCache::new(),
+            &mut buffer,
+            &key,
+        )
+        .await
+        {
+            Ok(value) => {
+                let Some(value) = value else {
+                    return Self::DEFAULT_BRIGHTNESS;
+                };
+
+                // Protects against future additions to Config vaule.
+                #[allow(irrefutable_let_patterns)]
+                let ConfigValue::BrightnessV0(value) = value
+                else {
+                    return Self::DEFAULT_BRIGHTNESS;
+                };
+
+                value
+            }
+            Err(e) => {
+                error!("Error fetching brightness: {}", e);
+                Self::DEFAULT_BRIGHTNESS
+            }
+        }
+    }
+    pub async fn set_brightness(&mut self, value: u8) -> Result<()> {
+        let mut buffer = [0u8; ConfigKey::BUFFER_SIZE + ConfigValue::BUFFER_SIZE];
+        let key = ConfigKey::BrightnessV0;
+        let value = ConfigValue::BrightnessV0(value);
         store_item(
             &mut self.flash,
             self.range.clone(),

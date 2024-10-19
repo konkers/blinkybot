@@ -18,6 +18,9 @@ endpoint!(
 
 endpoint!(GetAdcEndpoint, (), u16, "adc/get");
 
+endpoint!(GetBrightnessEndpoint, (), u8, "brightness/get");
+endpoint!(SetBrightnessEndpoint, u8, (), "brightness/get");
+
 #[derive(Serialize, Deserialize, Schema, Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[cfg_attr(feature = "wasm-bindgen", wasm_bindgen)]

@@ -134,45 +134,74 @@ where
     let mut friend_expression = comms.friend_expression.dyn_receiver().unwrap();
     let mut friend_blink_expression = comms.friend_blink_expression.dyn_receiver().unwrap();
     let mut adc_val_receiver = comms.adc_val.dyn_receiver().unwrap();
+    let mut brightness_val_receiver = comms.brightness_val.dyn_receiver().unwrap();
 
     let mut rng = Rand32::new(0);
     let mut seeing_friend = is_friend(adc_val_receiver.get().await);
+    let mut brightness = brightness_val_receiver.get().await;
 
-    set_face(&mut matrix, default_expression.get().await.pixels).await;
     loop {
         let until = Instant::now() + Duration::from_millis(rng.rand_range(2000..10000).into());
         while Instant::now() < until {
-            let fut = Timer::at(until);
-            match select(fut, adc_val_receiver.changed()).await {
-                Either::First(_) => break,
-                Either::Second(val) => {
-                    seeing_friend = is_friend(val);
-                }
+            if seeing_friend {
+                set_face(
+                    &mut matrix,
+                    friend_expression.get().await.pixels,
+                    brightness,
+                )
+                .await;
+            } else {
+                set_face(
+                    &mut matrix,
+                    default_expression.get().await.pixels,
+                    brightness,
+                )
+                .await;
             }
 
-            if seeing_friend {
-                set_face(&mut matrix, friend_expression.get().await.pixels).await;
-            } else {
-                set_face(&mut matrix, default_expression.get().await.pixels).await;
+            let fut = Timer::at(until);
+            match select3(
+                fut,
+                adc_val_receiver.changed(),
+                brightness_val_receiver.changed(),
+            )
+            .await
+            {
+                Either3::First(_) => break,
+                Either3::Second(val) => {
+                    seeing_friend = is_friend(val);
+                }
+                Either3::Third(val) => {
+                    brightness = val;
+                }
             }
         }
         info!("blink");
         if seeing_friend {
-            set_face(&mut matrix, friend_blink_expression.get().await.pixels).await;
+            set_face(
+                &mut matrix,
+                friend_blink_expression.get().await.pixels,
+                brightness,
+            )
+            .await;
         } else {
-            set_face(&mut matrix, blink_expression.get().await.pixels).await;
+            set_face(&mut matrix, blink_expression.get().await.pixels, brightness).await;
         }
         Timer::after_millis(25).await;
     }
 }
 
-async fn set_face<I2C, I2cError>(matrix: &mut IS31FL3731<I2C>, face: [u16; 7])
+async fn set_face<I2C, I2cError>(matrix: &mut IS31FL3731<I2C>, face: [u16; 7], brightness: u8)
 where
     I2C: I2c<Error = I2cError>,
 {
     for (y, row) in face.iter().enumerate() {
         for x in 0..15 {
-            let value = if (row & (1 << x)) != 0 { 0x2f } else { 0x00 };
+            let value = if (row & (1 << x)) != 0 {
+                brightness
+            } else {
+                0x00
+            };
             unwrap!(
                 matrix.pixel(x, y as u8, value).await,
                 "Failed to set pixel light on"

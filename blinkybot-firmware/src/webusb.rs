@@ -17,8 +17,8 @@ use postcard_rpc::{
 };
 
 use blinkybot_rpc::{
-    Expression, ExpressionIndex, GetAdcEndpoint, GetExpressionEndpoint, PingEndpoint,
-    SetExpression, SetExpressionEndpoint,
+    Expression, ExpressionIndex, GetAdcEndpoint, GetBrightnessEndpoint, GetExpressionEndpoint,
+    PingEndpoint, SetBrightnessEndpoint, SetExpression, SetExpressionEndpoint,
 };
 use static_cell::{ConstStaticCell, StaticCell};
 
@@ -30,6 +30,7 @@ pub struct Comms {
     pub friend_expression: Watch<ThreadModeRawMutex, Expression, 1>,
     pub friend_blink_expression: Watch<ThreadModeRawMutex, Expression, 1>,
     pub adc_val: Watch<ThreadModeRawMutex, u16, 2>,
+    pub brightness_val: Watch<ThreadModeRawMutex, u8, 1>,
 }
 
 impl Comms {
@@ -40,6 +41,7 @@ impl Comms {
             friend_expression: Watch::new(),
             friend_blink_expression: Watch::new(),
             adc_val: Watch::new(),
+            brightness_val: Watch::new(),
         }
     }
 }
@@ -50,6 +52,7 @@ pub struct Context {
     friend_expression_sender: DynSender<'static, Expression>,
     friend_blink_expression_sender: DynSender<'static, Expression>,
     adc_val_receiver: DynReceiver<'static, u16>,
+    brightness_val_sender: DynSender<'static, u8>,
     config_store: FlashConfigStore<Flash<'static, FLASH, Async, { crate::FLASH_SIZE }>>,
 }
 
@@ -71,6 +74,8 @@ define_dispatch! {
     SetExpressionEndpoint => async set_expression_handler,
     GetExpressionEndpoint => async get_expression_handler,
     GetAdcEndpoint => async get_adc_handler,
+    GetBrightnessEndpoint => async get_brightness_handler,
+    SetBrightnessEndpoint => async set_brightness_handler,
 }
 
 static ALL_BUFFERS: ConstStaticCell<AllBuffers<256, 256, 256>> =
@@ -149,6 +154,7 @@ pub async fn setup(
         friend_expression_sender: comms.friend_expression.dyn_sender(),
         friend_blink_expression_sender: comms.friend_blink_expression.dyn_sender(),
         adc_val_receiver: comms.adc_val.dyn_receiver().unwrap(),
+        brightness_val_sender: comms.brightness_val.dyn_sender(),
         config_store,
     };
     context.default_expression_sender.send(
@@ -175,6 +181,9 @@ pub async fn setup(
             .get_expression(ExpressionIndex::FriendBlink)
             .await,
     );
+    context
+        .brightness_val_sender
+        .send(context.config_store.get_brightness().await);
     let dispatch = Dispatcher::new(&mut buffers.tx_buf, endpoints.write_ep, context);
 
     spawner.must_spawn(dispatch_task(
@@ -263,8 +272,23 @@ async fn get_expression_handler(
     context.config_store.get_expression(request).await
 }
 
-async fn get_adc_handler(context: &mut Context, header: WireHeader, request: ()) -> u16 {
+async fn get_adc_handler(context: &mut Context, header: WireHeader, _request: ()) -> u16 {
     info!("get adc: seq - {=u32}", header.seq_no);
 
     context.adc_val_receiver.get().await
+}
+
+async fn get_brightness_handler(context: &mut Context, header: WireHeader, _request: ()) -> u8 {
+    let val = context.config_store.get_brightness().await;
+    info!("get brightness: seq - {=u32} {}", header.seq_no, val);
+    val
+}
+
+async fn set_brightness_handler(context: &mut Context, header: WireHeader, request: u8) {
+    info!("set brightness: seq - {=u32} {}", header.seq_no, request);
+
+    if let Err(e) = context.config_store.set_brightness(request).await {
+        error!("Failed to save brightness to flash: {}", e);
+    }
+    context.brightness_val_sender.send(request);
 }
