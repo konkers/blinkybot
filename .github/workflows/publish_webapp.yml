@@ -1,0 +1,71 @@
+name: Deploy to GH Pages
+
+on:
+  push:
+    branches:
+      - deploy
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@master
+        with:
+          submodules: 'true'
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: wasm32-unknown-unknown
+
+      - name: vite-plugin-wasm-pack Install 🔧
+        working-directory: ./third_party/vite-plugin-wasm-pack
+        run: npm install
+
+      - name: vite-plugin-wasm-pack Build 🏗️
+        working-directory: ./third_party/vite-plugin-wasm-pack
+        run: npm run build
+
+      - name: wasm-pack Install 🔧
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: wasm Build 🏗️
+        working-directory: ./blinkybot-ui/blinkybot-ui-wasm/
+        run: wasm-pack build --target web
+
+      - name: Install 🔧
+        working-directory: ./blinkybot-ui
+        run: npm install
+
+      - name: Build 🏗️
+        working-directory: ./blinkybot-ui
+        run: npm run build-only
+        env:
+          NODE_ENV: production
+
+      - name: Upload Artifacts 🚢
+        id: deployment
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: blinkybot-ui/dist
+
+  deploy:
+    needs: build
+
+    permissions:
+      pages: write      # to deploy to Pages
+      id-token: write   # to verify the deployment originates from an appropriate source
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages 🚀
+        id: deployment
+        uses: actions/deploy-pages@v4
+

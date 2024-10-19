@@ -108,7 +108,7 @@ pub async fn setup(
         max_packet_size: 64,
         vendor_code: 1,
         // If defined, shows a landing page which the device manufacturer would like the user to visit in order to control their device. Suggest the user to navigate to this URL when the device is connected.
-        landing_url: Some(Url::new("http://localhost:8080")),
+        landing_url: Some(Url::new("https://konkers.github.io/blinkybot")),
     });
 
     static COMMS: StaticCell<Comms> = StaticCell::new();
