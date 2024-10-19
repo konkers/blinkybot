@@ -43,6 +43,10 @@ function expressionIndex(name: string): ExpressionIndex | null {
     return ExpressionIndex.Default;
   } else if (name == 'blink') {
     return ExpressionIndex.Blink;
+  } else if (name == 'friend') {
+    return ExpressionIndex.Friend;
+  } else if (name == 'friend_blink') {
+    return ExpressionIndex.FriendBlink;
   } else {
     return null;
   }

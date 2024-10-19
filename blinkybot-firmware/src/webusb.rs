@@ -4,7 +4,7 @@ use embassy_rp::flash::{Async, Flash};
 use embassy_rp::peripherals::{FLASH, USB};
 use embassy_rp::usb::{Driver as UsbDriver, Endpoint, Out};
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
-use embassy_sync::watch::{DynSender, Watch};
+use embassy_sync::watch::{DynReceiver, DynSender, Watch};
 use embassy_usb::class::web_usb::{Config as WebUsbConfig, State, Url, WebUsb};
 use embassy_usb::driver::Driver;
 use embassy_usb::msos::{self, windows_version};
@@ -17,8 +17,8 @@ use postcard_rpc::{
 };
 
 use blinkybot_rpc::{
-    Expression, ExpressionIndex, GetExpressionEndpoint, PingEndpoint, SetExpression,
-    SetExpressionEndpoint,
+    Expression, ExpressionIndex, GetAdcEndpoint, GetExpressionEndpoint, PingEndpoint,
+    SetExpression, SetExpressionEndpoint,
 };
 use static_cell::{ConstStaticCell, StaticCell};
 
@@ -27,6 +27,9 @@ use crate::config_store::FlashConfigStore;
 pub struct Comms {
     pub default_expression: Watch<ThreadModeRawMutex, Expression, 1>,
     pub blink_expression: Watch<ThreadModeRawMutex, Expression, 1>,
+    pub friend_expression: Watch<ThreadModeRawMutex, Expression, 1>,
+    pub friend_blink_expression: Watch<ThreadModeRawMutex, Expression, 1>,
+    pub adc_val: Watch<ThreadModeRawMutex, u16, 2>,
 }
 
 impl Comms {
@@ -34,6 +37,9 @@ impl Comms {
         Self {
             default_expression: Watch::new(),
             blink_expression: Watch::new(),
+            friend_expression: Watch::new(),
+            friend_blink_expression: Watch::new(),
+            adc_val: Watch::new(),
         }
     }
 }
@@ -41,6 +47,9 @@ impl Comms {
 pub struct Context {
     default_expression_sender: DynSender<'static, Expression>,
     blink_expression_sender: DynSender<'static, Expression>,
+    friend_expression_sender: DynSender<'static, Expression>,
+    friend_blink_expression_sender: DynSender<'static, Expression>,
+    adc_val_receiver: DynReceiver<'static, u16>,
     config_store: FlashConfigStore<Flash<'static, FLASH, Async, { crate::FLASH_SIZE }>>,
 }
 
@@ -61,6 +70,7 @@ define_dispatch! {
     PingEndpoint => blocking ping_handler,
     SetExpressionEndpoint => async set_expression_handler,
     GetExpressionEndpoint => async get_expression_handler,
+    GetAdcEndpoint => async get_adc_handler,
 }
 
 static ALL_BUFFERS: ConstStaticCell<AllBuffers<256, 256, 256>> =
@@ -136,6 +146,9 @@ pub async fn setup(
     let mut context = Context {
         default_expression_sender: comms.default_expression.dyn_sender(),
         blink_expression_sender: comms.blink_expression.dyn_sender(),
+        friend_expression_sender: comms.friend_expression.dyn_sender(),
+        friend_blink_expression_sender: comms.friend_blink_expression.dyn_sender(),
+        adc_val_receiver: comms.adc_val.dyn_receiver().unwrap(),
         config_store,
     };
     context.default_expression_sender.send(
@@ -148,6 +161,18 @@ pub async fn setup(
         context
             .config_store
             .get_expression(ExpressionIndex::Blink)
+            .await,
+    );
+    context.friend_expression_sender.send(
+        context
+            .config_store
+            .get_expression(ExpressionIndex::Friend)
+            .await,
+    );
+    context.friend_blink_expression_sender.send(
+        context
+            .config_store
+            .get_expression(ExpressionIndex::FriendBlink)
             .await,
     );
     let dispatch = Dispatcher::new(&mut buffers.tx_buf, endpoints.write_ep, context);
@@ -220,6 +245,12 @@ async fn set_expression_handler(context: &mut Context, header: WireHeader, reque
         blinkybot_rpc::ExpressionIndex::Blink => {
             context.blink_expression_sender.send(request.expression)
         }
+        blinkybot_rpc::ExpressionIndex::Friend => {
+            context.friend_expression_sender.send(request.expression)
+        }
+        blinkybot_rpc::ExpressionIndex::FriendBlink => context
+            .friend_blink_expression_sender
+            .send(request.expression),
     }
 }
 
@@ -230,4 +261,10 @@ async fn get_expression_handler(
 ) -> Expression {
     info!("get expression: seq - {=u32} {}", header.seq_no, request);
     context.config_store.get_expression(request).await
+}
+
+async fn get_adc_handler(context: &mut Context, header: WireHeader, request: ()) -> u16 {
+    info!("get adc: seq - {=u32}", header.seq_no);
+
+    context.adc_val_receiver.get().await
 }

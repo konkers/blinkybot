@@ -1,7 +1,7 @@
 use std::convert::Infallible;
 
 use blinkybot_rpc::{
-    self, ExpressionIndex, GetExpressionEndpoint, PingEndpoint, SetExpression,
+    self, ExpressionIndex, GetAdcEndpoint, GetExpressionEndpoint, PingEndpoint, SetExpression,
     SetExpressionEndpoint,
 };
 use postcard_rpc::{
@@ -112,6 +112,11 @@ impl BlinkyBotClient {
             .send_resp::<GetExpressionEndpoint>(&index)
             .await?;
         Ok(Expression { inner: expression })
+    }
+
+    pub async fn get_adc(&self) -> Result<u16, Error<Infallible>> {
+        let val = self.client.send_resp::<GetAdcEndpoint>(&()).await?;
+        Ok(val)
     }
 }
 #[wasm_bindgen]

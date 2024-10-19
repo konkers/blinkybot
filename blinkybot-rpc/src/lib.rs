@@ -16,12 +16,16 @@ endpoint!(
     "expression/get"
 );
 
+endpoint!(GetAdcEndpoint, (), u16, "adc/get");
+
 #[derive(Serialize, Deserialize, Schema, Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[cfg_attr(feature = "wasm-bindgen", wasm_bindgen)]
 pub enum ExpressionIndex {
     Default = 0,
     Blink = 1,
+    Friend = 2,
+    FriendBlink = 3,
 }
 
 #[derive(Serialize, Deserialize, Schema, Clone, Debug, PartialEq, Eq)]

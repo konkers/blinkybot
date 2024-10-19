@@ -34,6 +34,9 @@ const blinkyBot = useBlinkyBotStore();
               <v-list rounded="lg">
                 <v-list-item title="Default" link to="/expression/default"></v-list-item>
                 <v-list-item title="Blink" link to="/expression/blink"></v-list-item>
+                <v-list-item title="Friend" link to="/expression/friend"></v-list-item>
+                <v-list-item title="Friend Blink" link to="/expression/friend_blink"></v-list-item>
+                <v-list-item title="Settings" link to="/settings"></v-list-item>
               </v-list>
             </v-sheet>
           </v-col>
