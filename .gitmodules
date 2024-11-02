@@ -7,3 +7,6 @@
 [submodule "third_party/vite-plugin-wasm-pack"]
 	path = third_party/vite-plugin-wasm-pack
 	url = https://github.com/konkers/vite-plugin-wasm-pack.git
+[submodule "third_party/embassy"]
+	path = third_party/embassy
+	url = https://github.com/embassy-rs/embassy

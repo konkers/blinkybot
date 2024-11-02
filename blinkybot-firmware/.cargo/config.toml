@@ -1,8 +1,8 @@
 [target.'cfg(all(target_arch = "arm", target_os = "none"))']
-runner = "probe-rs run --chip rp235x"
+runner = "probe-rs run --chip rp2040"
 
 [build]
-target = "thumbv8m.main-none-eabihf"
+target = "thumbv6m-none-eabi"
 
 [env]
 DEFMT_LOG = "debug"
