@@ -31,7 +31,7 @@ async function updateBrightness(value: number) {
       <div id="adc_val">{{ adc_val }}</div>
       <v-btn @click="getAdc()">Get ADC</v-btn>
       <v-slider
-        v-if="brightness"
+        v-if="brightness !== null"
         min="0"
         max="255"
         v-model="brightness"
