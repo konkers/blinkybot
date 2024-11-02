@@ -10,3 +10,6 @@
 [submodule "third_party/embassy"]
 	path = third_party/embassy
 	url = https://github.com/embassy-rs/embassy
+[submodule "third_party/picoserve"]
+	path = third_party/picoserve
+	url = https://github.com/konkers/picoserve
